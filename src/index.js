@@ -77,6 +77,40 @@ async function main() {
   }
 }
 
+function configureAxios(panelHost, apiKey, proxy) {
+  axios.defaults.baseURL = panelHost;
+  axios.defaults.headers.common["Authorization"] = `Bearer ${apiKey}`;
+  
+  // remove default size limits
+  axios.defaults.maxContentLength = Infinity;
+  axios.defaults.maxBodyLength = Infinity;
+
+  if (proxy) {
+    const [auth, hostPort] = proxy.split("@");
+    const [username, password] = auth.split(":");
+    const [host, port] = hostPort.split(":");
+
+    const httpsAgent = tunnel.httpsOverHttp({
+      proxy: {
+        host: host,
+        port: port,
+        proxyAuth: `${username}:${password}`,
+      },
+    });
+
+    var httpAgent = tunnel.httpOverHttp({
+      proxy: {
+        host: host,
+        port: port,
+        proxyAuth: `${username}:${password}`,
+      },
+    });
+
+    axios.defaults.httpsAgent = httpsAgent;
+    axios.defaults.httpAgent = httpAgent;
+  }
+}
+
 async function getSettings() {
   const panelHost = getInput("panel-host", { required: true });
   const apiKey = getInput("api-key", { required: true });
@@ -151,44 +185,7 @@ async function getSettings() {
   };
 }
 
-function configureAxios(panelHost, apiKey, proxy) {
-  axios.defaults.baseURL = panelHost;
-  axios.defaults.headers.common["Authorization"] = `Bearer ${apiKey}`;
-  axios.defaults.maxContentLength = Infinity;
-  axios.defaults.maxBodyLength = Infinity;
 
-  if (proxy) {
-    const [auth, hostPort] = proxy.split("@");
-    const [username, password] = auth.split(":");
-    const [host, port] = hostPort.split(":");
-
-    // axios.defaults.proxy = {
-    //   protocol: "http",
-    //   host,
-    //   port,
-    //   auth: { username, password },
-    // };
-
-    const httpsAgent = tunnel.httpsOverHttp({
-      proxy: {
-        host: host,
-        port: port,
-        proxyAuth: `${username}:${password}`,
-      },
-    });
-
-    var httpAgent = tunnel.httpOverHttp({
-      proxy: {
-        host: host,
-        port: port,
-        proxyAuth: `${username}:${password}`,
-      },
-    });
-
-    axios.defaults.httpsAgent = httpsAgent;
-    axios.defaults.httpAgent = httpAgent;
-  }
-}
 
 async function validateSourceFile(source) {
   try {
